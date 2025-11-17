@@ -132,6 +132,7 @@ app.post('/auth/signup', async (req, res) => {
       user: { id: user.id, name: user.name, email: user.email, role: user.role }
     });
   } catch (error) {
+    console.error('Signup error:', error?.message || error);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -167,6 +168,7 @@ app.post('/auth/login', async (req, res) => {
       user: { id: user.id, name: user.name, email: user.email, role: user.role }
     });
   } catch (error) {
+    console.error('Login error:', error?.message || error);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -180,6 +182,7 @@ app.get('/auth/me', authenticateToken, async (req, res) => {
     });
     res.json(user);
   } catch (error) {
+    console.error('Get user error:', error?.message || error);
     res.status(500).json({ error: 'Server error' });
   }
 });
