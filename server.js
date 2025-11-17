@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 const crypto = require('crypto');
+const { v4: uuidv4 } = require('uuid');
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 const SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS || '10', 10);
 
@@ -81,8 +82,9 @@ app.post('/api/auth/signup', async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+    const userId = uuidv4();
     const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword, role }
+      data: { id: userId, name, email, password: hashedPassword, role }
     });
 
     const token = jwt.sign(
@@ -97,6 +99,7 @@ app.post('/api/auth/signup', async (req, res) => {
       user: { id: user.id, name: user.name, email: user.email, role: user.role }
     });
   } catch (error) {
+    console.error('API Signup error:', error?.message || error);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -116,8 +119,9 @@ app.post('/auth/signup', async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+    const userId = uuidv4();
     const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword, role }
+      data: { id: userId, name, email, password: hashedPassword, role }
     });
 
     const token = jwt.sign(
