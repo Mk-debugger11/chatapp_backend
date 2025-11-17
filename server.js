@@ -101,33 +101,43 @@ app.post('/api/auth/signup', async (req, res) => {
   }
 });
 
-// Backwards-compatible signup route for frontends calling POST /signup
-app.post('/signup', async (req, res) => {
+// Frontend-compatible signup route
+app.post('/auth/signup', async (req, res) => {
   try {
-    console.log('Signup route working');
     const { name, email, password, role = 'user' } = req.body;
 
     if (!name || !email || !password) {
-      return res.status(400).json({ success: false, message: 'All fields are required' });
+      return res.status(400).json({ error: 'All fields are required' });
     }
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return res.status(400).json({ success: false, message: 'User already exists' });
+      return res.status(400).json({ error: 'User already exists' });
     }
 
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-    await prisma.user.create({ data: { name, email, password: hashedPassword, role } });
+    const user = await prisma.user.create({
+      data: { name, email, password: hashedPassword, role }
+    });
 
-    // Return the simple JSON shape requested by the frontend
-    return res.status(201).json({ success: true, message: 'User created' });
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.status(201).json({
+      message: 'User created successfully',
+      token,
+      user: { id: user.id, name: user.name, email: user.email, role: user.role }
+    });
   } catch (error) {
-    console.error('Error in /signup:', error);
-    return res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+// Also add login route without /api prefix
+app.post('/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -161,7 +171,8 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-app.get('/api/auth/me', authenticateToken, async (req, res) => {
+// Also add me route without /api prefix
+app.get('/auth/me', authenticateToken, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.userId },
@@ -172,6 +183,7 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
 
 app.get('/', (req, res) => {
   res.json({ status: 'ok', service: 'CareerLink API', env: process.env.NODE_ENV || 'development' });
